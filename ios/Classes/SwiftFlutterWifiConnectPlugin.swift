@@ -113,7 +113,6 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
               FlutterError( code: "unknownError", 
               message: error.localizedDescription,
               details: error.localizedDescription))
-            result(false)
             break
         }
         return
@@ -128,11 +127,21 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
       }
       if let currentSsid = this.getSSID() {
         os_log("connected ssid %@", log: .default, type: .info, currentSsid)
-        result(currentSsid.hasPrefix(hotspotConfig.ssid))
+        if (currentSsid.hasPrefix(hotspotConfig.ssid)) {
+          result(true)
+        } else {
+        result(
+          FlutterError( code: "connectedToWrongSSID", 
+            message: "expected ssid '\(hotspotConfig.ssid)', current ssid '\(currentSsid)'",
+            details: "expected ssid '\(hotspotConfig.ssid)', current ssid '\(currentSsid)'"))
+        }
         return
       }
       os_log("not connected to any ssid", log: .default, type: .error)
-      result(false)
+      result(
+        FlutterError( code: "notConnected", 
+        message: "not connected to any ssid",
+        details: "not connected to any ssid"))
     }
   }
 
