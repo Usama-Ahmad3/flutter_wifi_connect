@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import NetworkExtension
 import SystemConfiguration.CaptiveNetwork
+import os.log
 
 public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -89,30 +90,38 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
 
   @available(iOS 11, *)
   private func connect(hotspotConfig: NEHotspotConfiguration, result: @escaping FlutterResult) -> Void {
+    os_log("connecting to wifi", log: .default, type: .info)
     NEHotspotConfigurationManager.shared.apply(hotspotConfig) { [weak self] (error) in
 
       if let error = error as NSError? {
+        // https://developer.apple.com/documentation/networkextension/nehotspotconfigurationerror
         switch(error.code) {
         case NEHotspotConfigurationError.alreadyAssociated.rawValue:
+            os_log("ssid already associated, assuming connection successful", log: .default, type: .info)
             result(true)
             break
         case NEHotspotConfigurationError.userDenied.rawValue:
+            os_log("user denied wifi connection", log: .default, type: .error)
             result(false)
             break
         default:
+            os_log("error code: %u localizedMessage: '%@'", log: .default, type: .error, error.code, error.localizedDescription)
             result(false)
             break
         }
         return
       }
       guard let this = self else {
+        os_log("this is not self", log: .default, type: .error)
         result(false)
         return
       }
       if let currentSsid = this.getSSID() {
+        os_log("connected ssid %@", log: .default, type: .info, currentSsid)
         result(currentSsid.hasPrefix(hotspotConfig.ssid))
         return
       }
+      os_log("not connected to any ssid", log: .default, type: .error)
       result(false)
     }
   }
