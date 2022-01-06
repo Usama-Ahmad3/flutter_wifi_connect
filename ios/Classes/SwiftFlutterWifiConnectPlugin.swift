@@ -102,10 +102,17 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
             break
         case NEHotspotConfigurationError.userDenied.rawValue:
             os_log("user denied wifi connection", log: .default, type: .error)
-            result(false)
+            result(
+              FlutterError( code: "userDenied", 
+                message: "User denied WiFi connection",
+                details: "User denied WiFi connection"))
             break
         default:
             os_log("error code: %u localizedMessage: '%@'", log: .default, type: .error, error.code, error.localizedDescription)
+            result(
+              FlutterError( code: "unknownError", 
+              message: error.localizedDescription,
+              details: error.localizedDescription))
             result(false)
             break
         }
@@ -113,7 +120,10 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
       }
       guard let this = self else {
         os_log("this is not self", log: .default, type: .error)
-        result(false)
+        result(
+          FlutterError( code: "thisIsNotSelf", 
+            message: "this is not self",
+            details: "this is not self"))
         return
       }
       if let currentSsid = this.getSSID() {
