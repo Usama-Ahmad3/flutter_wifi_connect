@@ -322,16 +322,48 @@ class FlutterWifiConnectPlugin() : FlutterPlugin, MethodCallHandler {
             .setNetworkSpecifier(specifier)
             .build()
 
+    var suggestionUserApprovalStatusListener : WifiManager.SuggestionUserApprovalStatusListener? = null
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      // added in API Level 31 (Android 12) - version code S
+      // https://developer.android.google.cn/reference/android/net/wifi/WifiManager#addSuggestionUserApprovalStatusListener(java.util.concurrent.Executor,%20android.net.wifi.WifiManager.SuggestionUserApprovalStatusListener)
+      suggestionUserApprovalStatusListener = object : WifiManager.SuggestionUserApprovalStatusListener {
+          override fun onUserApprovalStatusChange(status : Int) {
+            if (status == WifiManager.STATUS_SUGGESTION_APPROVAL_REJECTED_BY_USER) {
+              // user cancelled on the WiFi system dialog
+              println("user refused")
+              // this is not being called when the user cancels after a timeout, instead of a retry
+              // issue is similar to https://stackoverflow.com/questions/66874374/connectivitymanager-android-detect-try-again-cancel-dialog-button-press
+              wifiManager.removeSuggestionUserApprovalStatusListener(this)
+              result.success(false);
+            }
+            print("other statu ")
+            println(status)
+          }
+        }
+
+      wifiManager.addSuggestionUserApprovalStatusListener(context.getMainExecutor(), suggestionUserApprovalStatusListener)
+    }
+
+    fun removeSuggestionUserApprovalStatusListener() {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && suggestionUserApprovalStatusListener != null) {
+        // only supported on API 31 (Android 12)
+        wifiManager.removeSuggestionUserApprovalStatusListener(suggestionUserApprovalStatusListener)
+      }
+    }
+
+    // }
     this.networkCallback = object : ConnectivityManager.NetworkCallback() {
       override fun onAvailable(network: Network) {
         super.onAvailable(network)
         connectivityManager.bindProcessToNetwork(network)
+        removeSuggestionUserApprovalStatusListener()
         result.success(true)
         // cannot unregister callback here since it would disconnect form the network
       }
 
       override fun onUnavailable() {
         super.onUnavailable()
+        removeSuggestionUserApprovalStatusListener()
         result.success(false)
         //connectivityManager.unregisterNetworkCallback(this)
       }
