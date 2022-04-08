@@ -2,6 +2,7 @@ import Flutter
 import UIKit
 import NetworkExtension
 import SystemConfiguration.CaptiveNetwork
+import os.log
 
 public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -89,31 +90,43 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
 
   @available(iOS 11, *)
   private func connect(hotspotConfig: NEHotspotConfiguration, result: @escaping FlutterResult) -> Void {
+    os_log("connecting to wifi", log: .default, type: .info)
     NEHotspotConfigurationManager.shared.apply(hotspotConfig) { [weak self] (error) in
 
       if let error = error as NSError? {
+        // https://developer.apple.com/documentation/networkextension/nehotspotconfigurationerror
         switch(error.code) {
         case NEHotspotConfigurationError.alreadyAssociated.rawValue:
+            os_log("ssid already associated, assuming connection successful", log: .default, type: .info)
             result(true)
             break
         case NEHotspotConfigurationError.userDenied.rawValue:
-            result(false)
+            os_log("user denied wifi connection", log: .default, type: .error)
+            result(
+              FlutterError( code: "userDenied", 
+                message: "User denied WiFi connection",
+                details: "User denied WiFi connection"))
             break
         default:
-            result(false)
+            os_log("error code: %u localizedMessage: '%@'", log: .default, type: .error, error.code, error.localizedDescription)
+            result(
+              FlutterError( code: "unknownError", 
+              message: error.localizedDescription,
+              details: error.localizedDescription))
             break
         }
         return
       }
       guard let this = self else {
-        result(false)
+        os_log("this is not self", log: .default, type: .error)
+        result(
+          FlutterError( code: "thisIsNotSelf", 
+            message: "this is not self",
+            details: "this is not self"))
         return
       }
-      if let currentSsid = this.getSSID() {
-        result(currentSsid.hasPrefix(hotspotConfig.ssid))
-        return
-      }
-      result(false)
+      result(true)
+      return
     }
   }
 
