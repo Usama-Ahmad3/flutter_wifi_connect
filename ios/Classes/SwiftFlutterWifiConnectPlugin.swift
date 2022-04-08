@@ -132,11 +132,13 @@ public class SwiftFlutterWifiConnectPlugin: NSObject, FlutterPlugin {
 
   @available(iOS 11, *)   
   private func disconnect() -> Bool {
-    let ssid: String? = getSSID()
-    if(ssid == nil){
-      return false
+    NEHotspotConfigurationManager.shared.getConfiguredSSIDs { (ssidsArray) in
+      for ssid in ssidsArray {
+        // disconnect from every network that was configured by the app
+        os_log("disconnecting from: %@", log: .default, type: .error, ssid)
+        NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: ssid)
+      }
     }
-    NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: ssid ?? "")
     return true
   }
 
